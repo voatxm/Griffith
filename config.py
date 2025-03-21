@@ -4,27 +4,27 @@ from logging.handlers import RotatingFileHandler
 
 settings = {
     '_id': 1,  # don't change this line only, if you do you're dying by my hand
-    "SPOILER": True,  # bool write True or False
-    "FILE_AUTO_DELETE": 1,  # in seconds
+    "SPOILER": False,  # bool write True or False
+    "FILE_AUTO_DELETE": 3600,  # in seconds
     "AUTO_DEL": True,  # bool write True or False
-    "STICKER_ID": "CAACAgUAAyEFAASAgUwqAAJh_mckw2STkeY1WMOHJGY4Hs9_1-2fAAIPFAACYLShVon-N6AFLnIiHgQ",
+    "STICKER_ID": "CAACAgUAA_mckw2STkeY1WMOHJGY4Hs9_1-2fAAIPFAACYLShVon-N6AFLnIiHgQ",
     "stk_del_timer": 1, # in seconds
-    "bot_admin": [183298628,932987382] #e.g. 1963929292,38739292827 differetiate admins with a comma
+    "bot_admin": [6321064549] #e.g. 1963929292,38739292827 differetiate admins with a comma
 }
 
 HELP_MSG = """help msg
 """  # shown only to admins
 
 # Bot token @Botfather
-TG_BOT_TOKEN = '7643757891:AAFEm1tWpBovyMbzOz64E8Y6ebz5txhxgmk'
+TG_BOT_TOKEN = '7533155506:AAAYdp0eZrcrLQFkzuYTzE3zw'
 # Your API ID from my.telegram.org
-APP_ID = int(os.environ.get("APP_ID", "26634100"))
+APP_ID = int(os.environ.get("APP_ID", "266300"))
 
 # Your API Hash from my.telegram.org
-API_HASH = os.environ.get("API_HASH", "9ea49405d5a93e784114c469f5ce4bbd")
+API_HASH = os.environ.get("API_HASH", "9ea493e784114c469f5ce4bbd")
 
 # Your db channel Id
-DB_CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002139537668"))
+DB_CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-100250360"))
 
 # NAME OF OWNER
 OWNER = os.environ.get("OWNER", "VØAT")
@@ -38,15 +38,15 @@ if OWNER_ID not in SUDO:
     SUDO.append(OWNER_ID)
 
 # Port
-PORT = os.environ.get("PORT", "8108")
+PORT = os.environ.get("PORT", "")
 
 # Database
-DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://piper384895:aXhu9isrjYpUQkGk@leechbot.7i9gbke.mongodb.net/?retryWrites=true&w=majority&appName=leechbot")
-DB_NAME = os.environ.get("DATABASE_NAME", "Clustre")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://piper38godb.net/?retryWrites=true&w=majority&appName=leechbot")
+DB_NAME = os.environ.get("DATABASE_NAME", "Gith")
 
 # FSUBS configuration
 FSUBS = [
-    {'_id': -1001593947578, "CHANNEL_NAME": "Manga Yugen"}
+    {'_id': -109647, "CHANNEL_NAME": "Anime Tomb"}
 ]
 
 
@@ -66,7 +66,7 @@ if OWNER_ID not in ADMINS:
     ADMINS.append(OWNER_ID)
 
 # Set your Custom Caption here, Keep None for Disable Custom Caption
-CUSTOM_CAPTION = '<blockquote expandable><b>{previouscaption} \n \n◦ ʙʏ ⌯ @Anime_Yugen \n \n◦ ɴᴇᴛᴡᴏʀᴋ ⌯ @YugenNetwork</b></blockquote>'
+CUSTOM_CAPTION = '<blockquote><b>{previouscaption}\n\n◦ ʙʏ ⌯ @Anime_Tomb</b></blockquote>'
 
 # Set True if you want to prevent users from forwarding files from the bot
 PROTECT_CONTENT = True if os.environ.get('PROTECT_CONTENT', "False") == "True" else False

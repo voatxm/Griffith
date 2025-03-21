@@ -107,57 +107,78 @@ def is_user_subscribed(statuses):
 def force_sub(func):
     """Implement Force Subs using @force_sub before any command function."""
     async def wrapper(client, message):
+        SPOILER = get_spoiler()
+        msg = await message.reply_photo(caption="<code>Connecting!</code>", photo="plugins/image/fsub.jpg", has_spoiler=SPOILER)
         user_id = message.from_user.id
         
-        fsubs = load_fsubs()  # Load channels from database
-        SPOILER = get_spoiler()
-        logger.info(f"User {user_id} invoked {message.command[0]} command")
+        try:
+            fsubs = load_fsubs()  # Load channels from database
+            logger.debug(f"Loaded fsubs: {fsubs}")
+            await msg.edit_text("<code>Connecting!!</code>")
+            await msg.edit_text("<code>Connecting!!!</code>")
+            logger.debug(f"Loaded spoiler: {SPOILER}")
+            await msg.edit_text("<code>Connecting!</code>")
+            logger.info(f"User {user_id} invoked {message.command[0]} command")
+            await msg.edit_text("<code>Loading!</code>")
+            statuses = await check_subscription(client, user_id)
+            logger.debug(f"Subscription statuses for user {user_id}: {statuses}")
 
-        statuses = await check_subscription(client, user_id)
-        logger.debug(f"Subscription statuses for user {user_id}: {statuses}")
+            if is_user_subscribed(statuses):
+                logger.debug(f"User {user_id} passed the subscription check.")
+                await msg.edit_text("<code>Subscription Status: Passed</code>")
+                await msg.delete()
+                await func(client, message)  # Added await
+            else:
+                logger.debug(f"User {user_id} failed the subscription check.")
+                channels_list = []
+                buttons = []
+                await msg.edit_text("<code>Loading!!</code>")
+                # Collect channels user is not subscribed to and prepare buttons
+                for channel in fsubs:
+                    channel_id = channel['_id']
+                    channel_name = channel['CHANNEL_NAME']
 
-        if is_user_subscribed(statuses):
-            logger.info(f"User {user_id} passed the subscription check.")
-            await func(client, message)  # Added await
-        else:
-            logger.info(f"User {user_id} failed the subscription check.")
-            not_joined_channels = []
-            buttons = []
-
-            # Collect channels user is not subscribed to and prepare buttons
-            for channel in fsubs:
-                channel_id = channel['_id']
-                channel_name = channel['CHANNEL_NAME']
-
-                # Check if the user is a member of the channel
-                if statuses.get(channel_id) not in {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}:
-                    not_joined_channels.append(channel_name)
-                    link = await get_invite_link(channel_id)  # Attempt to get the invite link
-                    if link:
-                        buttons.append([InlineKeyboardButton(channel_name, url=link)])
+                    if statuses.get(channel_id) in {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER}:
+                        t = (str(channel_name), "Joined")
+                        channels_list.append(t)
                     else:
-                        buttons.append([InlineKeyboardButton("Error creating invite link", url="https://t.me/Manga_Yugen")])            
+                        t = (str(channel_name), "Not Joined")
+                        channels_list.append(t)
+                        link = await get_invite_link(channel_id)  # Attempt to get the invite link
+                        if link:
+                            buttons.append(InlineKeyboardButton(channel_name, url=link))
+                        else:
+                            buttons.append(InlineKeyboardButton("Error creating invite link", url="https://t.me/Manga_Yugen"))
+                    
+                from_link = message.text.split(" ")
+                if len(from_link) > 1:
+                    try_again_link = f"https://t.me/{client.username}/?start={from_link[1]}"
+                    buttons.append(InlineKeyboardButton("Try Again!", url=try_again_link))
+                await msg.edit_text("<code>Loading!!!</code>")
+                channels_message = (
+                    "<blockquote><b>Channels Status:</b></blockquote>\n" +
+                    "\n".join(f"<b>{i+1}. {name}</b>\n<b>Status:</b> <code>{userstatus}</code>\n" for i, (name, userstatus) in enumerate(channels_list))
+                )
+                logger.debug(f"Channels message: {channels_message}")
 
-            # Prepare "Try Again" button if applicable
-            from_link = message.text.split(" ")
-            if len(from_link) > 1:
-                try_again_link = f"https://t.me/{client.username}/?start={from_link[1]}"
-                buttons.append([InlineKeyboardButton("Try Again", url=try_again_link)])
-
-            channels_message = (
-                "<blockquote><b>Join these channels:</b></blockquote>\n" +
-                "\n".join(f"<b>• {name}</b>" for name in not_joined_channels)
-            )
-
-            await message.reply_photo(
-                photo='plugins/image/fsub.jpg',
-                caption=channels_message,
-                has_spoiler=SPOILER,
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
+                n = 2  # Adjust number of buttons per row
+                buttons = [buttons[i:i + n] for i in range(0, len(buttons), n)]
+                await msg.edit_text("<code>Subscription Status: Failed</code>")
+                if buttons:
+                    try:
+                        await msg.edit_text(
+                            text=channels_message,
+                            reply_markup=InlineKeyboardMarkup(buttons)
+                        )
+                    except Exception as e:
+                        logger.error(f"Error editing message with buttons: {e}")
+                else:
+                    logger.error("No buttons to send. Check the button generation.")
+        
+        except Exception as e:
+            logger.error(f"Error in force_sub decorator: {e}")
 
     return wrapper
-
 
 
 #Commands
@@ -337,10 +358,10 @@ async def channel_post(client: Client, message: Message):
                 print(e)
                 await reply_text.edit_text("Something went Wrong..!")
                 return
-            converted_id = post_message.id * abs(client.db_channel.id)
-            string = f"get-{converted_id}"
+            converted_id = post_message.id
+            string = f"{converted_id}"
             base64_string = await encode(string)
-            link = f"https://t.me/{client.username}?start={base64_string}"
+            link = f"https://t.me/{client.username}?start=filez{base64_string}"
         
             reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
         
@@ -381,28 +402,29 @@ async def start_command(client: Client, message: Message):
             base64_string = text.split(" ", 1)[1]
         except IndexError:
             return
-
+        base64_string = base64_string[5:]
         string = await decode(base64_string)
+        
         argument = string.split("-")
         
         ids = []
-        if len(argument) == 3:
+        if len(argument) == 2:
             try:
-                start = int(int(argument[1]) / abs(client.db_channel.id))
-                end = int(int(argument[2]) / abs(client.db_channel.id))
+                start = int(argument[0])
+                end = int(argument[1])
                 ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
             except Exception as e:
                 print(f"Error decoding IDs: {e}")
                 return
 
-        elif len(argument) == 2:
+        elif len(argument) == 1:
             try:
-                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
+                ids = [int(argument[0])]
             except Exception as e:
                 print(f"Error decoding ID: {e}")
                 return
 
-        temp_msg = await message.reply("Wait A Sec..")
+        temp_msg = await message.reply("<blockquote><b>Wait A Sec..</b></blockquote>")
         try:
             messages = await get_messages(client, ids)
         except Exception as e:
@@ -422,12 +444,12 @@ async def start_command(client: Client, message: Message):
             reply_markup = msg.reply_markup if DISABLE_CHANNEL_BUTTON else None
 
             try:
-                copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, parse_mode=ParseMode.HTML, 
+                copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, 
                                             reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
                 yugen_msgs.append(copied_msg)
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, parse_mode=ParseMode.HTML, 
+                copied_msg = await msg.copy(chat_id=message.from_user.id, caption=caption, 
                                             reply_markup=reply_markup, protect_content=PROTECT_CONTENT)
                 yugen_msgs.append(copied_msg)
             except Exception as e:
@@ -449,7 +471,7 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton('⛩️ ʏᴜɢᴇɴ ⛩️', url='https://t.me/YugenNetwork')
+                    InlineKeyboardButton('⛩️ TOMB ⛩️', url='https://t.me/Anime_Tomb')
                 ],
                 [
                    InlineKeyboardButton("⚠️ ᴀʙᴏᴜᴛ ⚠️", callback_data = "about"),
@@ -486,7 +508,7 @@ async def start_command(client: Client, message: Message):
         reply_markup = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton('⛩️ ʏᴜɢᴇɴ ⛩️', url='https://t.me/YugenNetwork')
+                    InlineKeyboardButton('⛩️ TOMB ⛩️', url='https://t.me/Anime_Tomb')
                 ],
                 [
                    InlineKeyboardButton("⚠️ ᴀʙᴏᴜᴛ ⚠️", callback_data = "about"),
